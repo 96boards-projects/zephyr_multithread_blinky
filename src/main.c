@@ -2,49 +2,21 @@
 #include <device.h>
 #include <gpio.h>
 #include <misc/printk.h>
-#include <shell/shell.h>
+#include <board.h>
 
 /* size of stack area used by each thread */
-#define STACKSIZE 128
+#define STACKSIZE 1024
 
 /* scheduling priority used by each thread */
 #define PRIORITY 7
 
-#define MY_SHELL_MODULE "sample_module"
+/* Change this if you have an LED connected to a custom port */
+#define PORT0	LED0_GPIO_PORT
+#define PORT1	LED1_GPIO_PORT
 
-/*-----shell code fom <zephyr_base>/samples/subsys/shell/shell/------*/
-static int shell_cmd_ping(int argc, char *argv[])
-{
-	ARG_UNUSED(argc);
-	ARG_UNUSED(argv);
-
-	printk("pong\n");
-
-	return 0;
-}
-
-static int shell_cmd_params(int argc, char *argv[])
-{
-	int cnt;
-
-	printk("argc = %d\n", argc);
-	for (cnt = 0; cnt < argc; cnt++) {
-		printk("  argv[%d] = %s\n", cnt, argv[cnt]);
-	}
-	return 0;
-}
-
-static struct shell_cmd commands[] = {
-	{ "ping", shell_cmd_ping, NULL },
-	{ "params", shell_cmd_params, "print argc" },
-	{ NULL, NULL, NULL }
-};
-
-void main(void)
-{
-	SHELL_REGISTER(MY_SHELL_MODULE, commands);
-}
-/*-------------------------------------------------------------------*/
+/* Change this if you have an LED connected to a custom pin */
+#define LED0	LED0_GPIO_PIN
+#define LED1	LED1_GPIO_PIN
 
 
 void blink1(void)
@@ -52,10 +24,10 @@ void blink1(void)
 	int cnt = 0;
 	struct device *gpioa;
 
-	gpioa = device_get_binding("GPIOA");
-	gpio_pin_configure(gpioa, 15, GPIO_DIR_OUT);
+	gpioa = device_get_binding(PORT0);
+	gpio_pin_configure(gpioa, LED0, GPIO_DIR_OUT);
 	while (1) {
-		gpio_pin_write(gpioa, 15, (cnt + 1) % 2);
+		gpio_pin_write(gpioa, LED0, (cnt + 1) % 2);
 		k_sleep(100);
 		cnt++;
 	}
@@ -66,31 +38,27 @@ void blink2(void)
 	int cnt = 0;
 	struct device *gpiod;
 
-	gpiod = device_get_binding("GPIOD");
-	gpio_pin_configure(gpiod, 2, GPIO_DIR_OUT);
+	gpiod = device_get_binding(PORT1);
+	gpio_pin_configure(gpiod, LED1, GPIO_DIR_OUT);
 	while (1) {
-		gpio_pin_write(gpiod, 2, cnt % 2);
+		gpio_pin_write(gpiod, LED1, cnt % 2);
 		k_sleep(1000);
 		cnt++;
 	}
 }
 
-void blink3(void)
+void uart_out(void)
 {
-	int cnt = 0, cnt2 = 0, sleep = 100;
-	struct device *gpiob;
+	int cnt = 1;
 
-	gpiob = device_get_binding("GPIOB");
-	gpio_pin_configure(gpiob, 5, GPIO_DIR_OUT);
 	while (1) {
-		while (cnt2 != 5) {
-			gpio_pin_write(gpiob, 5, cnt2 % 2);
-			k_sleep(sleep);
-			sleep += 100;
-			cnt2++;
+		printk("Toggle USR1 LED: Counter = %d\n", cnt);
+		if (cnt >= 10) {
+			printk("Toggle USR2 LED: Counter = %d\n", cnt);
+			cnt = 0;
 		}
-		cnt2 = 0;
-		sleep = 100;
+		k_sleep(100);
+		cnt++;
 	}
 }
 
@@ -98,5 +66,5 @@ K_THREAD_DEFINE(blink1_id, STACKSIZE, blink1, NULL, NULL, NULL,
 		PRIORITY, 0, K_NO_WAIT);
 K_THREAD_DEFINE(blink2_id, STACKSIZE, blink2, NULL, NULL, NULL,
 		PRIORITY, 0, K_NO_WAIT);
-K_THREAD_DEFINE(blink3_id, STACKSIZE, blink3, NULL, NULL, NULL,
+K_THREAD_DEFINE(uart_out_id, STACKSIZE, uart_out, NULL, NULL, NULL,
 		PRIORITY, 0, K_NO_WAIT);
