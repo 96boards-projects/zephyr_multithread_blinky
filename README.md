@@ -45,6 +45,9 @@ This example is available in the upstream Zephyr Source: https://github.com/zeph
 $ cd zephyr_base
 $ source zephyr-env.sh
 $ cd samples/basic/threads
+$ mkdir build
+$ cd build
+$ cmake -DBOARD=96b_carbon ..
 $ make
 ```
 
